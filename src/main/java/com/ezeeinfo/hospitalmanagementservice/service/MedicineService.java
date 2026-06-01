@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.ezeeinfo.hospitalmanagementservice.exception.ResourceNotFoundException;
 import com.ezeeinfo.hospitalmanagementservice.model.Medicine;
 import com.ezeeinfo.hospitalmanagementservice.repository.MedicineRepository;
 
@@ -34,7 +35,7 @@ public class MedicineService {
 			existingMedicine.setSupplierName(medicine.getSupplierName());
 			return ResponseEntity.ok(medicineRepository.save(existingMedicine));
 		}
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine Not found");
+		throw new ResourceNotFoundException("Medicine Not found");
 	}
 
 }

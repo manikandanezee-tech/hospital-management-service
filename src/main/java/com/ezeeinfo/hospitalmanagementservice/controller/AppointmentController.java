@@ -1,5 +1,6 @@
 package com.ezeeinfo.hospitalmanagementservice.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,5 +44,10 @@ public class AppointmentController {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<?>deleteAppointment(@PathVariable int id){
 		return appointmentService.deleteAppointment(id);
+	}
+	
+	@GetMapping("/date/{date}")
+	public List<Appointment> getAppointmentsByDate(@PathVariable LocalDate date){
+		return appointmentService.getAppointmentsByDate(date);
 	}
 }

@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.ezeeinfo.hospitalmanagementservice.dto.BillDto;
+import com.ezeeinfo.hospitalmanagementservice.exception.BussinessException;
+import com.ezeeinfo.hospitalmanagementservice.exception.ResourceNotFoundException;
 import com.ezeeinfo.hospitalmanagementservice.model.Appointment;
 import com.ezeeinfo.hospitalmanagementservice.model.Bill;
 import com.ezeeinfo.hospitalmanagementservice.model.Doctor;
@@ -31,15 +33,20 @@ public class BillService {
 
 	public ResponseEntity<?> addBill(BillDto billDto) {
 		Appointment appointment = appointmentRepository.findById(billDto.getAppointmentId()).orElse(null);
+//		for find already bill generated on that particular appointment id or not
+		boolean isAlreadyExists=billRepository.existsByAppointment(appointment);
+
 
 		if (appointment != null) {
+			
 			Doctor doctor = appointment.getDoctor();
-// get prescription use of appointment(appointment id)
+			
+// get prescription use of appointment(appointment id) for further calculation fees
+			if(!isAlreadyExists) {
 			Prescription prescription = prescriptionRepository.findByAppointment(appointment);
 			
 			if (prescription != null) {
 				Double medicineCost = prescription.getMedicine().getPrice() * prescription.getQuantity();
-				System.out.println("medicine cost " + medicineCost);
 				
 // for calculate actual price include doctor fee + medicine cost * quantity
 				Bill bill = new Bill();
@@ -48,12 +55,19 @@ public class BillService {
 				bill.setAppointment(appointment);
 				bill.setTotalAmount(doctor.getConsultationFee() + medicineCost);
 				return ResponseEntity.ok(billRepository.save(bill));
-			} else {
-				return ResponseEntity.status(HttpStatus.NOT_FOUND).body("prescripe the doctore first ");
+			
+			}
+			else {
+				throw new ResourceNotFoundException("Prescripe the doctor");
+			}
+			}
+			else {
+				  throw new BussinessException("Bill Already Generated");
 			}
 		}
+		else throw new ResourceNotFoundException("Appointment NotFound !");
 
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Appointment  not found");
+		
 	}
 
 	public List<Bill> getAllBills() {

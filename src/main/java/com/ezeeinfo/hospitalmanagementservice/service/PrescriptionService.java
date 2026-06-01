@@ -7,7 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.ezeeinfo.hospitalmanagementservice.ActiveStatus;
 import com.ezeeinfo.hospitalmanagementservice.dto.PrescriptionDto;
+import com.ezeeinfo.hospitalmanagementservice.exception.BussinessException;
+import com.ezeeinfo.hospitalmanagementservice.exception.ResourceNotFoundException;
 import com.ezeeinfo.hospitalmanagementservice.model.Appointment;
 import com.ezeeinfo.hospitalmanagementservice.model.Doctor;
 import com.ezeeinfo.hospitalmanagementservice.model.Medicine;
@@ -42,9 +45,9 @@ public class PrescriptionService {
 		Doctor doctor=doctorRepository.findById(appointment.getDoctor().getDoctorId()).orElse(null);
 //		for check previous appointment are completed or not
 		boolean isAllPrescribe=true;
-//		for get the same date and same doctors appointment list
+//		to get the list of same date and same doctors appointment list
 		List<Appointment>appointmentList=appointmentRepository.findByDoctorAndAppointmentDate(doctor,appointment.getAppointmentDate());
-		System.err.println(appointmentList.size());
+		
 		for(Appointment appointmentCheck:appointmentList) {
 			if(appointmentCheck.getTokenNumber()<appointment.getTokenNumber() && !appointmentCheck.getStatus().equals("COMPLETED")) {
 				isAllPrescribe=false;
@@ -59,6 +62,7 @@ public class PrescriptionService {
 			prescription.setMedicine(medicine);
 			prescription.setNotes(prescriptionDto.getNotes());
 			prescription.setQuantity(prescriptionDto.getQuantity());
+			
 // for update the medicine stock 
 			Medicine updateMedicineStock = new Medicine();
 			updateMedicineStock.setExpiryDate(medicine.getExpiryDate());
@@ -67,12 +71,13 @@ public class PrescriptionService {
 			if (medicine.getStockQuantity() > prescription.getQuantity()) {
 				updateMedicineStock.setStockQuantity(medicine.getStockQuantity() - prescription.getQuantity());
 			} else {
-				return ResponseEntity.status(HttpStatus.CONFLICT).body("out of stock");
+				throw new BussinessException("out of stock");
 			}
 			updateMedicineStock.setSupplierName(medicine.getSupplierName());
 //			call the medicine update method for stock update
 			medicineService.updateMedicine(medicine.getMedicineId(), updateMedicineStock);
 			
+//			change the appointment Status booked to complete
 			Appointment appointmentUpdateStatus=new Appointment();
 			appointmentUpdateStatus.setAppointmentDate(appointment.getAppointmentDate());
 			appointmentUpdateStatus.setAppointmentTime(appointment.getAppointmentTime());
@@ -81,6 +86,7 @@ public class PrescriptionService {
 			appointmentUpdateStatus.setStatus("COMPLETED");
 			appointmentUpdateStatus.setTokenNumber(appointment.getTokenNumber());
 			appointmentUpdateStatus.setAppointmentId(appointment.getAppointmentId());
+			appointmentUpdateStatus.setActiveStatus(ActiveStatus.ACTIVE);
 //			update the appointment for change the status.
 			appointmentRepository.save(appointmentUpdateStatus);
 
@@ -91,7 +97,7 @@ public class PrescriptionService {
 			}
 		}
 
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medicine or appointment not found");
+		throw new ResourceNotFoundException("Medicine or appointment not found");
 
 	}
 }
